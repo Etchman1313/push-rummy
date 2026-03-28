@@ -1,0 +1,15 @@
+node_modules
+**/node_modules
+.git
+.gitignore
+*.db
+.env
+.env.*
+.cursor
+**/dist
+client/dist
+server/dist
+shared/dist
+docs
+*.md
+!README.md

@@ -1,0 +1,27 @@
+# Push Rummy — isolated from mediastack ports.
+# Host 9887 avoids Readarr/WebUI conventions that use 8787 in MediaStack docs.
+# Access: http://<this-host>:9887
+services:
+  push-rummy:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: push-rummy
+    ports:
+      - "9887:8787"
+    volumes:
+      - push-rummy-data:/data
+    environment:
+      NODE_ENV: production
+      DB_PATH: /data/push-rummy.db
+      BIND_ADDRESS: "0.0.0.0"
+      # Required: unique secret, min 32 chars (see docs/SECURITY.md)
+      JWT_SECRET: ${JWT_SECRET}
+      # Optional: comma-separated browser origins, e.g. https://game.example.com
+      # CORS_ORIGIN: ${CORS_ORIGIN:-}
+      # Optional: only if you need POST /admin/reset-db (set a strong random value)
+      # ADMIN_RESET_KEY: ${ADMIN_RESET_KEY:-}
+    restart: unless-stopped
+
+volumes:
+  push-rummy-data:
