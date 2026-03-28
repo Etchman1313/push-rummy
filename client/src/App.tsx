@@ -11,50 +11,11 @@ import {
 } from "@push-rummy/shared";
 import type { CSSProperties } from "react";
 import { DragEvent, useEffect, useMemo, useRef, useState } from "react";
+import { DeveloperHome } from "./DeveloperHome";
+import { isDeveloperUser } from "./developer";
 import { useGameStore } from "./store";
 import { ToastStack } from "./ToastStack";
-
-const objectiveLabel: Record<string, string> = {
-  TWO_SETS_OF_3: "Two Sets of 3",
-  RUN4_SET4: "Run and a Set",
-  TWO_RUNS_OF_4: "Two Runs of 4",
-  THREE_SETS_OF_3: "Three Sets of 3",
-  RUN_OF_7: "Run of 7",
-  SET_OF_8: "Set of 8"
-};
-
-const objectiveOrder: Array<keyof typeof objectiveLabel> = [
-  "TWO_SETS_OF_3",
-  "RUN4_SET4",
-  "TWO_RUNS_OF_4",
-  "THREE_SETS_OF_3",
-  "RUN_OF_7",
-  "SET_OF_8"
-];
-
-function phaseLabel(phase: string): string {
-  const map: Record<string, string> = {
-    draw_choice: "Choose draw",
-    action: "Play",
-    discard_required: "Discard",
-    complete: "Hand complete"
-  };
-  return map[phase] ?? phase.replace(/_/g, " ");
-}
-
-/** Lower cumulative is better; ties share rank (competition ranking). */
-function cumulativePlaceBySeat(results: Array<{ seat: number; cumulativeScore: number }>): Map<number, number> {
-  const sorted = [...results].sort((a, b) => a.cumulativeScore - b.cumulativeScore);
-  const map = new Map<number, number>();
-  let place = 1;
-  for (let i = 0; i < sorted.length; i++) {
-    if (i > 0 && sorted[i].cumulativeScore !== sorted[i - 1].cumulativeScore) {
-      place = i + 1;
-    }
-    map.set(sorted[i].seat, place);
-  }
-  return map;
-}
+import { cardArtUrl, cumulativePlaceBySeat, objectiveLabel, objectiveOrder, phaseLabel } from "./uiUtils";
 
 function LeaderboardPanel({ variant = "full" }: { variant?: "full" | "embedded" }) {
   const user = useGameStore((s) => s.user);
@@ -348,15 +309,6 @@ function Lobby() {
       )}
     </div>
   );
-}
-
-function cardArtUrl(card: Card): string {
-  if (card.rank === "JOKER") return "https://deckofcardsapi.com/static/img/X1.png";
-  const rankMap: Record<string, string> = { "10": "0" };
-  const suitMap: Record<string, string> = { clubs: "C", diamonds: "D", hearts: "H", spades: "S" };
-  const r = rankMap[card.rank] ?? card.rank;
-  const s = suitMap[card.suit as "clubs" | "diamonds" | "hearts" | "spades"];
-  return `https://deckofcardsapi.com/static/img/${r}${s}.png`;
 }
 
 function GameBoard({ match }: { match: MatchState }) {
@@ -688,6 +640,7 @@ export default function App() {
   const [username, setUsername] = useState("player1");
   const [password, setPassword] = useState("password");
   const [code, setCode] = useState("");
+  const [developerHomeOpen, setDeveloperHomeOpen] = useState(false);
 
   const ratings = profile?.ratings as { global_rating?: number } | undefined;
   const records = profile?.records as { wins?: number; losses?: number } | undefined;
@@ -706,6 +659,17 @@ export default function App() {
   }, [user, loadProfile]);
 
   const inMatch = Boolean(room?.match);
+  const showDeveloperNav = Boolean(user && isDeveloperUser(user.username));
+
+  useEffect(() => {
+    if (inMatch) setDeveloperHomeOpen(false);
+  }, [inMatch]);
+
+  useEffect(() => {
+    if (!user || !isDeveloperUser(user.username)) setDeveloperHomeOpen(false);
+  }, [user]);
+
+  const developerView = showDeveloperNav && developerHomeOpen;
 
   return (
     <main className={`app ${inMatch ? "app--inGame" : ""}`}>
@@ -717,6 +681,13 @@ export default function App() {
           <p className="hero__sub">
             Online card pressure for 2–4 players. Build objectives, steal wilds, and force the table to choke on discards.
           </p>
+          {showDeveloperNav && !inMatch && !developerView && (
+            <p className="hero__devLink">
+              <button type="button" className="hero__devLinkBtn" onClick={() => setDeveloperHomeOpen(true)}>
+                Developer Home
+              </button>
+            </p>
+          )}
         </div>
         {user && (
           <div className="userDock">
@@ -741,62 +712,68 @@ export default function App() {
         )}
       </header>
 
-      {!user && (
-        <div className="loginHero panel">
-          <div className="loginHero__copy">
-            <h2>Play competitively</h2>
-            <p>Create an account to save your rating, track HvH vs AI splits, and climb the leaderboard.</p>
-          </div>
-          <div className="loginHero__form">
-            <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Username" autoComplete="username" />
-            <input
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password"
-              type="password"
-              autoComplete="current-password"
-            />
-            <div className="loginHero__actions">
-              <button className="primary" type="button" onClick={() => void login(username, password)}>
-                Log in
-              </button>
-              <button type="button" onClick={() => void register(username, password)}>
-                Register
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {inMatch ? (
-        room?.match && <GameBoard match={room.match} />
+      {developerView ? (
+        <DeveloperHome onBack={() => setDeveloperHomeOpen(false)} />
       ) : (
         <>
-          <LeaderboardPanel />
-
-      {user && !room && (
-        <section className="panel playPanel">
-          <h2>Table</h2>
-          <p className="panelHint">Host a new room or join with a code from a friend.</p>
-          <div className="playGrid">
-            <button className="primary playTile" type="button" onClick={() => void createRoom()}>
-              <strong>New room</strong>
-              <span>Host — you get seat 1</span>
-            </button>
-            <div className="playJoin">
-              <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="ROOM CODE" />
-              <button type="button" onClick={() => void joinRoom(code)}>
-                Join
-              </button>
+          {!user && (
+            <div className="loginHero panel">
+              <div className="loginHero__copy">
+                <h2>Play competitively</h2>
+                <p>Create an account to save your rating, track HvH vs AI splits, and climb the leaderboard.</p>
+              </div>
+              <div className="loginHero__form">
+                <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Username" autoComplete="username" />
+                <input
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Password"
+                  type="password"
+                  autoComplete="current-password"
+                />
+                <div className="loginHero__actions">
+                  <button className="primary" type="button" onClick={() => void login(username, password)}>
+                    Log in
+                  </button>
+                  <button type="button" onClick={() => void register(username, password)}>
+                    Register
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
-          {error && <p className="error">{error}</p>}
-        </section>
-      )}
+          )}
 
-      {room && room.status === "lobby" && <Lobby />}
+          {inMatch ? (
+            room?.match && <GameBoard match={room.match} />
+          ) : (
+            <>
+              <LeaderboardPanel />
 
-      {user && error && !room && <p className="error error--standalone">{error}</p>}
+              {user && !room && (
+                <section className="panel playPanel">
+                  <h2>Table</h2>
+                  <p className="panelHint">Host a new room or join with a code from a friend.</p>
+                  <div className="playGrid">
+                    <button className="primary playTile" type="button" onClick={() => void createRoom()}>
+                      <strong>New room</strong>
+                      <span>Host — you get seat 1</span>
+                    </button>
+                    <div className="playJoin">
+                      <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="ROOM CODE" />
+                      <button type="button" onClick={() => void joinRoom(code)}>
+                        Join
+                      </button>
+                    </div>
+                  </div>
+                  {error && <p className="error">{error}</p>}
+                </section>
+              )}
+
+              {room && room.status === "lobby" && <Lobby />}
+
+              {user && error && !room && <p className="error error--standalone">{error}</p>}
+            </>
+          )}
         </>
       )}
     </main>

@@ -1,64 +1,86 @@
-# Push Rummy Canonical Rules (v1)
+# Push Rummy — canonical rules (v1)
 
-## Table Setup
+This document matches the implementation in **`@push-rummy/shared`**. If behavior diverges, treat the code as authoritative and update this file.
 
-- Players: 2-4.
-- Deck: double standard deck with jokers.
-- Wild cards: all Jokers and all 2s.
-- Deal: 7 cards to each player.
-- Start discard pile: flip one card from deck.
+## Table setup
 
-## Hand Objectives (6 Hands)
+- **Players:** 2–4.
+- **Deck:** two standard 52-card decks plus **four jokers** (`shared/src/cards.ts`: `createDoubleDeckWithJokers`).
+- **Wild cards:** all **2s** and all **JOKER** cards (`isWild` on `Card`).
+- **Deal:** 7 cards per player; one card starts the discard pile; remainder is the stock.
 
-1. Two Sets of 3
-2. Run of 4 + Set of 4
-3. Two Runs of 4
-4. Three Sets of 3
-5. Run of 7
-6. Set of 8
+## Hand objectives (six hands, fixed order)
 
-## Turn Flow
+Each hand has exactly one objective. The engine uses the following structure (`OBJECTIVE_REQUIREMENTS` in `rules.ts`):
 
-1. Draw choice:
-   - `Pick Up`: take top discard card.
-   - `Push`: draw top deck card face-down, pair it with top discard, and push both to immediate left player (mandatory receipt). Then draw next card from deck for yourself.
-2. Main actions:
-   - Lay down objective melds if requirements met.
-   - If already laid down, add cards to existing table melds.
-   - If already laid down, replace eligible wilds on table with natural cards and take wild into hand.
-3. End turn:
-   - If not going out, must discard a legal card.
-   - If no legal discard exists, draw one from deck and re-check repeatedly until legal discard exists.
+| Hand | Objective id | Required melds |
+|------|----------------|------------------|
+| 1 | `TWO_SETS_OF_3` | Two **sets** of **3** cards each |
+| 2 | `RUN4_SET4` | One **run** of **4** + one **set** of **4** |
+| 3 | `TWO_RUNS_OF_4` | Two **runs** of **4** each |
+| 4 | `THREE_SETS_OF_3` | Three **sets** of **3** each |
+| 5 | `RUN_OF_7` | One **run** of **7** |
+| 6 | `SET_OF_8` | One **set** of **8** |
 
-## Melds
+A **set** is same rank (any suits); wilds may substitute. A **run** is consecutive ranks in **one suit**; wilds may fill gaps. **Ace** may be low (e.g. A-2-3) or high (e.g. Q-K-A). **K-A-2** “around the corner” is **not** a valid run.
 
-- Set: same rank cards (wilds may substitute).
-- Run: sequential ranks **in one suit** (wilds may substitute for missing ranks in that suit). Example: 7♦-8♦-9♦-10♦ is valid; mixing suits (e.g. 7♥-8♠-9♣-10♦) is not.
-- Ace may be **low** (before a 2, e.g. A-2-3) or **high** (after a king, e.g. Q-K-A). **K-A-2** around the corner is not a valid run.
-- No additional natural-card minimum in melds beyond objective size requirement.
+## Turn flow
 
-## Laydown and Table Play
+### 1. Draw choice
 
-- A player must satisfy current hand objective before they are considered laid down.
-- Only players who already laid down may:
-  - add cards to existing melds,
-  - replace/steal wilds.
-- Wild replacement is only on that player’s turn.
+- **Pick up:** take the top discard into your hand; turn moves to main play.
+- **Push:** draw one card from stock face-down, take the current top discard, and pass **both** to the player on your **left** (they add both to hand). You then draw one card from stock for yourself. (Implementation: `choose_push` in `game.ts`.)
 
-## Going Out
+### 2. Main play (after draw)
 
-- A player may go out immediately when their last card is played.
-- Final discard is not required when going out.
+- **First laydown:** you must lay melds that **satisfy the current hand objective** using cards from your hand. The engine checks the objective via `findLaydownForObjective`.
+- **After you are “laid down”** for this hand, you may:
+  - **Add** a card from hand to an existing table meld (`add_to_meld`) if `canAddToMeld` allows it.
+  - **Replace** a wild in a meld with a natural from hand (`replace_wild`) when `canReplaceWildInMeld` allows it (set: natural matches rank; run: suit and represented rank must align).
 
-## Scoring
+### 3. End of turn — discard
 
-- Scoring applies to all non-winning players at hand end:
-  - 3-9 = 5 points
-  - 10/J/Q/K = 10 points
-  - A = 20 points
-  - 2 = 25 points
-  - Joker = 50 points
-- Winner of game after Hand 6 is lowest cumulative score.
-- Tie-break:
-  1. Lowest Hand 6 score.
-  2. If still tied: Hand 5, then 4, then 3, then 2, then 1.
+- If you still have cards and did not go out, you must **discard** a **legal** card.
+- **Wilds (2s and Jokers) cannot be discarded** if they could legally be added to a table meld (`legalDiscardCandidates`).
+- If **no** legal discard exists (e.g. hand is only wilds that cannot be discarded yet), you **draw from stock** repeatedly until a legal discard exists (**forced draw**). The UI may surface a forced-draw event from the server state.
+
+### Deck exhaustion
+
+- If the stock is empty and you must draw, the discard pile (except the top visible card) is shuffled to form a new stock (`drawCard` in `game.ts`). If only one card remains in discard and stock is empty, the game cannot draw — rare edge case.
+
+## Going out
+
+- You may **go out** when your last card leaves your hand legally:
+  - Via **laydown** / **add_to_meld** that empties your hand (no discard step).
+  - Via **discard** of your **last natural** (wilds cannot be discarded as the last card if they must be melded instead).
+- **Winner of the hand** scores **0** points for that hand; opponents score the **deadwood** value of cards left in their hands (see scoring).
+
+## Scoring (deadwood values)
+
+Implemented in `scoreValue` (`cards.ts`):
+
+| Card | Points |
+|------|--------|
+| Joker | 50 |
+| 2 (wild) | 25 |
+| A | 20 |
+| 10, J, Q, K | 10 |
+| 3–9 | 5 |
+
+## Match scoring and placement
+
+- **Cumulative score** across all six hands: **lower is better**.
+- **Winner** after hand 6: seat(s) with **lowest** cumulative total.
+- **Tie-break** (`getWinners` / `breakTieByLatestHands`): among tied seats, compare **per-hand** results starting from the **last** hand and walking backward; lowest score in that hand wins the tie; missing data for a seat is treated as worst possible for that comparison.
+
+**Competition ranking** (e.g. leaderboard-style “place” in a round): if two players tie for lowest cumulative, they **share** the same rank; the next worse score skips a place (e.g. 1, 1, 3). The client helper `cumulativePlaceBySeat` follows this logic.
+
+## AI (reference)
+
+- AI chooses **pick up vs push** on `draw_choice` (easy: random; medium/hard: heuristic using discard rank).
+- Then tries **laydown** if the objective can be satisfied, else **add to meld**, else **discard** (`shared/src/ai.ts`).
+
+## Related docs
+
+- **`docs/GAMEPLAY.md`** — accounts, lobby, UI flow, ratings overview.
+- **`docs/ARCHITECTURE.md`** — server and engine boundaries.

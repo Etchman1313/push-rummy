@@ -9,3 +9,4 @@ node_modules/
 *.tsbuildinfo
 npm-debug.log*
 .DS_Store
+coverage/

@@ -450,7 +450,12 @@ if (clientDist) {
 
 const PORT = Number(process.env.PORT ?? 8787);
 const BIND = process.env.BIND_ADDRESS ?? "0.0.0.0";
-httpServer.listen(PORT, BIND, () => {
-  // eslint-disable-next-line no-console
-  console.log(`Push Rummy listening on ${BIND}:${PORT} (NODE_ENV=${process.env.NODE_ENV ?? "development"})`);
-});
+
+export { app, httpServer, io };
+
+if (!process.env.VITEST) {
+  httpServer.listen(PORT, BIND, () => {
+    // eslint-disable-next-line no-console
+    console.log(`Push Rummy listening on ${BIND}:${PORT} (NODE_ENV=${process.env.NODE_ENV ?? "development"})`);
+  });
+}

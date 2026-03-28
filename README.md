@@ -12,10 +12,12 @@ Realtime Push Rummy for 2-4 players with configurable AI opponents.
 
 | Doc | Purpose |
 |-----|---------|
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Components, data flow, deployment, scale-up |
+| [docs/README.md](docs/README.md) | Index of all documentation |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design, modules, APIs, state machine, deployment, scale-up |
+| [docs/GAMEPLAY.md](docs/GAMEPLAY.md) | End-to-end product flow: accounts, lobby, table, AI, scoring, ratings |
+| [docs/RULES.md](docs/RULES.md) | Canonical card rules and objectives (mirrors `@push-rummy/shared`) |
 | [docs/SECURITY.md](docs/SECURITY.md) | Secrets, CORS, TLS, admin, rate limits |
-| [docs/PERFORMANCE.md](docs/PERFORMANCE.md) | Leaderboard and server bounds |
-| [docs/RULES.md](docs/RULES.md) | Game rules mirrored in code |
+| [docs/PERFORMANCE.md](docs/PERFORMANCE.md) | Leaderboard cost, AI bounds, scaling caveats |
 
 ## Quick start (development)
 
@@ -85,7 +87,7 @@ See [.env.example](.env.example) for a template.
 - `shared/src` — engine, rules, scoring, AI
 - `server/src` — HTTP, Socket.IO, SQLite, ratings finalization
 - `client/src` — UI and store
-- `docs/` — architecture, security, performance, rules
+- `docs/` — architecture, gameplay, rules, security, performance ([index](docs/README.md))
 
 ## Competitive data
 
