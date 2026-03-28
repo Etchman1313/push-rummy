@@ -27,10 +27,32 @@ export function createDoubleDeckWithJokers(): Card[] {
   return cards;
 }
 
+/** Uniform integer in [0, maxExclusive) using crypto when available (unbiased). */
+export function randomIntBelow(maxExclusive: number): number {
+  if (maxExclusive <= 0) throw new Error("randomIntBelow: maxExclusive must be positive");
+  const c = globalThis.crypto?.getRandomValues?.bind(globalThis.crypto);
+  if (!c) {
+    return Math.floor(Math.random() * maxExclusive);
+  }
+  const buf = new Uint32Array(1);
+  const limit = 0x1_0000_0000 - (0x1_0000_0000 % maxExclusive);
+  let x: number;
+  do {
+    c(buf);
+    x = buf[0]!;
+  } while (x >= limit);
+  return x % maxExclusive;
+}
+
+export function pickUniformElement<T>(items: readonly T[]): T {
+  if (items.length === 0) throw new Error("pickUniformElement: empty array");
+  return items[randomIntBelow(items.length)]!;
+}
+
 export function shuffle<T>(items: T[]): T[] {
   const arr = [...items];
   for (let i = arr.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = randomIntBelow(i + 1);
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
   return arr;

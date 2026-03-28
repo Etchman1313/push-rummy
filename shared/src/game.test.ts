@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { applyAction, continueToNextHand, createMatch, getWinners, type GameAction } from "./game.js";
 import { legalDiscardCandidates } from "./rules.js";
 import { tc } from "./test-helpers.js";
-import type { PlayerInfo, Rank } from "./types.js";
+import type { MatchState, PlayerInfo, Rank } from "./types.js";
 
 const h = "hearts";
 
@@ -13,30 +13,38 @@ function twoHumans(): PlayerInfo[] {
   ];
 }
 
+/** Tests that call applyAction as seat 0 need a fixed first actor; real matches randomize first seat. */
+function matchForTests(): MatchState {
+  const m = createMatch("R", twoHumans());
+  m.hand.activeSeat = 0;
+  return m;
+}
+
 describe("createMatch", () => {
   it("starts hand one with draw_choice", () => {
     const m = createMatch("ROOM", twoHumans());
     expect(m.status).toBe("in_hand");
     expect(m.hand.turnPhase).toBe("draw_choice");
     expect(m.hand.hands[0]).toHaveLength(7);
+    expect(twoHumans().map((p) => p.seat)).toContain(m.hand.activeSeat);
   });
 });
 
 describe("applyAction", () => {
   it("ignores actions when match not in hand", () => {
-    const m = createMatch("R", twoHumans());
+    const m = matchForTests();
     m.status = "lobby";
     const r = applyAction(m, 0, { type: "choose_pickup" });
     expect(r).toBe(m);
   });
 
   it("throws on wrong seat", () => {
-    const m = createMatch("R", twoHumans());
+    const m = matchForTests();
     expect(() => applyAction(m, 1, { type: "choose_pickup" })).toThrow("Not your turn");
   });
 
   it("choose_pickup takes discard", () => {
-    const m = createMatch("R", twoHumans());
+    const m = matchForTests();
     const top = m.hand.discard[m.hand.discard.length - 1]!;
     const prevLen = m.hand.hands[0].length;
     const next = applyAction(m, 0, { type: "choose_pickup" });
@@ -46,7 +54,7 @@ describe("applyAction", () => {
   });
 
   it("choose_push moves cards to next player", () => {
-    const m = createMatch("R", twoHumans());
+    const m = matchForTests();
     const next = applyAction(m, 0, { type: "choose_push" });
     expect(next.hand.turnPhase).toBe("action");
     expect(next.hand.hands[1].length).toBeGreaterThan(7);
@@ -55,14 +63,14 @@ describe("applyAction", () => {
 
 describe("getWinners", () => {
   it("returns lowest cumulative seat(s)", () => {
-    const m = createMatch("R", twoHumans());
+    const m = matchForTests();
     m.cumulativeScores[0] = 10;
     m.cumulativeScores[1] = 5;
     expect(getWinners(m)).toEqual([1]);
   });
 
   it("breaks cumulative ties using hand history", () => {
-    const m = createMatch("R", twoHumans());
+    const m = matchForTests();
     m.cumulativeScores[0] = 20;
     m.cumulativeScores[1] = 20;
     m.handHistory = [
@@ -75,13 +83,13 @@ describe("getWinners", () => {
 
 describe("continueToNextHand", () => {
   it("no-ops when not between hands", () => {
-    const m = createMatch("R", twoHumans());
+    const m = matchForTests();
     const n = continueToNextHand(m);
     expect(n.currentHandIndex).toBe(0);
   });
 
   it("advances hand when between_hands", () => {
-    const m = createMatch("R", twoHumans());
+    const m = matchForTests();
     m.status = "between_hands";
     const n = continueToNextHand(m);
     expect(n.currentHandIndex).toBe(1);
@@ -91,7 +99,7 @@ describe("continueToNextHand", () => {
 
 describe("laydown and discard", () => {
   it("laydown two sets goes out", () => {
-    const m = createMatch("R", twoHumans());
+    const m = matchForTests();
     m.hand.hands[0] = [
       tc("a", "7", h),
       tc("b", "7", "spades"),
@@ -113,7 +121,7 @@ describe("laydown and discard", () => {
   });
 
   it("rejects duplicate card in laydown", () => {
-    const m = createMatch("R", twoHumans());
+    const m = matchForTests();
     const [a, b, c] = m.hand.hands[0];
     m.hand.turnPhase = "action";
     expect(() =>
@@ -125,7 +133,7 @@ describe("laydown and discard", () => {
   });
 
   it("discards after pickup when legal candidate exists", () => {
-    const m = createMatch("R", twoHumans());
+    const m = matchForTests();
     let s = applyAction(m, 0, { type: "choose_pickup" });
     const candidates = legalDiscardCandidates(s.hand.hands[0], s.hand.tableMelds);
     expect(candidates.length).toBeGreaterThan(0);
@@ -135,7 +143,7 @@ describe("laydown and discard", () => {
   });
 
   it("choose_push reshuffles when deck empty", () => {
-    const m = createMatch("R", twoHumans());
+    const m = matchForTests();
     m.hand.deck = [];
     m.hand.discard = [tc("d1", "4", h), tc("d2", "5", h), tc("d3", "6", h)];
     const next = applyAction(m, 0, { type: "choose_push" });
@@ -143,7 +151,7 @@ describe("laydown and discard", () => {
   });
 
   it("unknown action type returns cloned state unchanged", () => {
-    const m = createMatch("R", twoHumans());
+    const m = matchForTests();
     m.hand.turnPhase = "action";
     const r = applyAction(m, 0, { type: "not_a_real_action" } as unknown as GameAction);
     expect(r).not.toBe(m);
@@ -152,7 +160,7 @@ describe("laydown and discard", () => {
   });
 
   it("replace_wild swaps natural for wild in set", () => {
-    const m = createMatch("R", twoHumans());
+    const m = matchForTests();
     const wild = tc("w", "2", h, true);
     const meld = {
       id: "mx",
@@ -171,7 +179,7 @@ describe("laydown and discard", () => {
   });
 
   it("discard last natural goes out", () => {
-    const m = createMatch("R", twoHumans());
+    const m = matchForTests();
     const last = tc("last", "4", "clubs");
     m.hand.hands[0] = [last];
     m.hand.turnPhase = "discard_required";
@@ -181,7 +189,7 @@ describe("laydown and discard", () => {
   });
 
   it("add_to_meld last card goes out", () => {
-    const m = createMatch("R", twoHumans());
+    const m = matchForTests();
     const meld = {
       id: "mx",
       ownerSeat: 0,
@@ -198,7 +206,7 @@ describe("laydown and discard", () => {
   });
 
   it("add_to_meld triggers forced draw when remaining hand is all wilds", () => {
-    const m = createMatch("R", twoHumans());
+    const m = matchForTests();
     const meld = {
       id: "mx",
       ownerSeat: 0,
@@ -218,7 +226,7 @@ describe("laydown and discard", () => {
   });
 
   it("add_to_meld extends run and refreshes wildAssignments", () => {
-    const m = createMatch("R", twoHumans());
+    const m = matchForTests();
     const meld = {
       id: "mr",
       ownerSeat: 0,
@@ -240,7 +248,7 @@ describe("laydown and discard", () => {
   });
 
   it("sets match finished after winning the final objective hand", () => {
-    const m = createMatch("R", twoHumans());
+    const m = matchForTests();
     m.currentHandIndex = 5;
     m.hand.hands[0] = [tc("solo", "4", h)];
     m.hand.turnPhase = "discard_required";
@@ -249,7 +257,7 @@ describe("laydown and discard", () => {
   });
 
   it("laydown leaves only wilds and forces draw before discard", () => {
-    const m = createMatch("R", twoHumans());
+    const m = matchForTests();
     m.hand.hands[0] = [
       tc("a", "7", h),
       tc("b", "7", "spades"),
@@ -274,7 +282,7 @@ describe("laydown and discard", () => {
   });
 
   it("add_to_meld wild on set updates wildAssignments", () => {
-    const m = createMatch("R", twoHumans());
+    const m = matchForTests();
     const meld = {
       id: "mx",
       ownerSeat: 0,

@@ -286,7 +286,7 @@ describe("useGameStore", () => {
       socket: mockSocket as never,
       room: { code: "QQQQQ", hostId: "u", seats: [], status: "lobby", match: null }
     });
-    await useGameStore.getState().setAiSeat(1, "easy");
+    await useGameStore.getState().setAiSeat(1, "novice");
     expect(mockSocket.emit).toHaveBeenCalledWith("room:setSeat", expect.objectContaining({ seat: 1 }), expect.any(Function));
   });
 

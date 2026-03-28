@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { cardFace, createDoubleDeckWithJokers, rankValue, scoreValue, shuffle } from "./cards.js";
 
 describe("createDoubleDeckWithJokers", () => {
@@ -9,13 +9,11 @@ describe("createDoubleDeckWithJokers", () => {
 });
 
 describe("shuffle", () => {
-  it("returns same length and preserves elements", () => {
+  it("returns same length and preserves multiset", () => {
     const arr = [1, 2, 3, 4, 5];
-    vi.spyOn(Math, "random").mockReturnValue(0.3);
     const out = shuffle(arr);
     expect(out.length).toBe(5);
-    expect(out.sort()).toEqual([1, 2, 3, 4, 5]);
-    vi.restoreAllMocks();
+    expect([...out].sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 5]);
   });
 });
 

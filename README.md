@@ -18,6 +18,16 @@ Realtime Push Rummy for 2-4 players with configurable AI opponents.
 | [docs/RULES.md](docs/RULES.md) | Canonical card rules and objectives (mirrors `@push-rummy/shared`) |
 | [docs/SECURITY.md](docs/SECURITY.md) | Secrets, CORS, TLS, admin, rate limits |
 | [docs/PERFORMANCE.md](docs/PERFORMANCE.md) | Leaderboard cost, AI bounds, scaling caveats |
+| [docs/RELEASE.md](docs/RELEASE.md) | **Commit + push:** GitHub **and** local Docker rebuild/restart |
+
+## Release workflow (commit and push)
+
+In this project, finishing a change usually means:
+
+1. Push to **GitHub** (`git push`).
+2. Rebuild and restart **local Docker** so the running app matches `main`: `npm run docker:up` (`docker compose up -d --build`).
+
+Details and a checklist are in **[docs/RELEASE.md](docs/RELEASE.md)**.
 
 ## Quick start (development)
 
@@ -79,7 +89,9 @@ See [.env.example](.env.example) for a template.
 
 ## Game features
 
-- 2–4 players, room codes, mixed human/AI tables, AI difficulty per seat.
+- 2–4 players, room codes, mixed human/AI tables, **five AI tiers** (novice → master) plus legacy easy/medium/hard mapping.
+- **Random first actor** each hand; host stays seat 1 but is not always first to play.
+- **Fair shuffle** (crypto RNG when available) for deal and deck reshuffles.
 - 6-hand objectives, push rule, wilds, melds, legal discard enforcement.
 - Cumulative scoring, tie-breaks, auth, leaderboard, ratings (global + segmented).
 
@@ -113,4 +125,4 @@ Do not enable on public deployments unless you accept short-lived tokens and wip
 - `npm run dev` — shared build + server + Vite
 - `npm run build` — production artifacts
 - `npm run typecheck` — TypeScript
-- `npm run docker:up` / `npm run docker:down` — Compose helpers
+- `npm run docker:up` / `npm run docker:down` — Compose helpers (after `git push`, run `docker:up` to refresh local containers)

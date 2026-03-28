@@ -3,7 +3,7 @@
 ## Server
 
 - **Lobby and active matches** live in an in-memory `Map`. Throughput is bounded by single-process CPU and Node’s event loop, which is sufficient for a small private server.
-- **AI turns:** `autoRunAi` caps chained AI steps per event (**8**) so a pathological state cannot spin forever in one tick.
+- **AI turns:** `autoRunAi` caps chained outer steps per event (**8**); each step runs `runAiTurn`, which itself bounds inner actions so a pathological state cannot spin forever in one tick. AI logic is heuristic (`shared/src/ai.ts`).
 - **SQLite:** WAL mode is enabled. Writes happen on **match finalization** (ratings/records), not on every card action.
 
 ## Leaderboard (`GET /leaderboard`)

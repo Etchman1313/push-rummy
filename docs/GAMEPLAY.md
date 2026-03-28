@@ -10,19 +10,21 @@ This document describes the **player experience** and how it maps to the running
 
 ## Leaderboard (lobby)
 
-- Before or during play, users can open the **leaderboard** panel. Data comes from `GET /leaderboard` with filters for **matchup mode** (all, human vs human, human vs AI, or per AI difficulty) and **sort** (rating, wins, win rate, average points).
+- Before or during play, users can open the **leaderboard** panel. Data comes from `GET /leaderboard` with filters for **matchup mode** (all, human vs human, human vs AI, or per **rating tier**: easy / medium / hard — grouping in-game AI tiers as above) and **sort** (rating, wins, win rate, average points).
 - Leaderboards reflect **persisted** competitive data, not in-memory lobbies.
 
 ## Rooms and lobby
 
 - A **host** creates a room and receives a **short room code** (invite-link style security — see `docs/SECURITY.md`).
 - Other players **join** with that code while the match has not started.
-- The host configures **seats**: each seat can be **open** (for a joining human) or filled with an **AI** at a chosen difficulty (**easy**, **medium**, **hard**). Display names for bots are fixed labels (e.g. Scout / Strategist / Grandmaster).
+- The host configures **seats**: each seat can be **open** (for a joining human) or filled with an **AI** at a chosen tier (**Novice** through **Master**). Legacy labels **easy / medium / hard** are still accepted on the wire and map to **novice / skilled / expert**. Bot display names in the lobby use tier labels (e.g. Scout (Novice), Grandmaster (Master)).
 - **2–4 seated players** are required to start. Empty seats do not count.
+- The host always occupies **seat 1** in the UI, but **who acts first on each new hand** is chosen **at random** among seated players (host is not guaranteed to be first).
 
 ## Starting a match
 
-- When the host starts the game, the server builds a **match** from seat order: each seat becomes a `PlayerInfo` with optional `aiLevel` for bots.
+- When the host starts the game, the server builds a **match** from seat order: each seat becomes a `PlayerInfo` with optional `aiLevel` for bots (normalized to canonical tiers).
+- The shared engine **shuffles** the stock with a **cryptographic RNG** when available (`crypto.getRandomValues`), with a safe fallback where not. Each new hand picks a **random starting seat** for the draw phase.
 - The shared engine deals the first hand and sets the first **hand objective** (hand 1 of 6). See **RULES.md** for the objective list.
 
 ## Turn flow (what the player sees)
@@ -37,10 +39,11 @@ If someone **goes out** (empties their hand legally), the hand ends immediately 
 ## AI opponents
 
 - After each state change, the server runs **automated turns** for AI seats in a **bounded loop** so one human action cannot stall the process.
-- **Easy**: random choice between pick up and push on the draw step; otherwise tries objective laydown, then adding to melds, then discard.
-- **Medium / hard**: on the draw step, **medium** prefers **pick up** when the player holds any card of the **same rank** as the top discard (heuristic); otherwise pushes. **Hard** uses the same draw rule as medium in the current implementation; post-draw logic matches the shared “try laydown → add to meld → discard” pipeline.
+- **Tiers** (canonical): **novice**, **casual**, **skilled**, **expert**, **master** — from beginner-style noise through stronger heuristics. See `shared/src/ai.ts` and `shared/src/aiLevel.ts` for normalization and rating buckets.
+- **Rough behavior**: novice uses more random draw/discard; casual mixes randomness with structured play; skilled uses same-rank / objective-aware pickup, **imperfect discard-pile “memory”** (last N discards), and occasional ace/face discard bias; expert/master add full-pile draw bias, ranked wild replacement by hand “danger,” optimized discards with small jitter, and prefers **larger / objective-critical melds** when several `add_to_meld` moves are legal (e.g. SET_OF_8).
+- **Leaderboard** still exposes three **rating columns** (easy / medium / hard tiers): novice+casual roll into **easy**, skilled into **medium**, expert+master into **hard**.
 
-Exact AI behavior lives in `shared/src/ai.ts` and is subject to tuning.
+Exact AI behavior is heuristic (no deep search) and subject to tuning.
 
 ## Scorecard and cumulative score
 
@@ -65,3 +68,4 @@ Exact AI behavior lives in `shared/src/ai.ts` and is subject to tuning.
 
 - **[RULES.md](RULES.md)** — meld validity, objectives, scoring values, tie-breaking.
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** — sockets, HTTP, and engine boundaries.
+- **[RELEASE.md](RELEASE.md)** — commit, push to GitHub, and refresh local Docker (project convention).

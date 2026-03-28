@@ -7,7 +7,17 @@ import path from "node:path";
 import { createServer } from "node:http";
 import { fileURLToPath } from "node:url";
 import { Server } from "socket.io";
-import { applyAction, continueToNextHand, createMatch, GameAction, MatchState, PlayerInfo, runAiTurn } from "@push-rummy/shared";
+import {
+  applyAction,
+  continueToNextHand,
+  createMatch,
+  GameAction,
+  MatchState,
+  normalizeAiLevel,
+  PlayerInfo,
+  runAiTurn,
+  type AiLevel
+} from "@push-rummy/shared";
 import {
   db,
   getLeaderboard,
@@ -30,7 +40,7 @@ type LobbySeat = {
   id: string;
   name: string;
   isAi: boolean;
-  aiLevel?: "easy" | "medium" | "hard";
+  aiLevel?: AiLevel;
   socketId?: string;
 };
 
@@ -89,10 +99,16 @@ function roomCode(): string {
   return Math.random().toString(36).slice(2, 7).toUpperCase();
 }
 
-function aiDisplayName(level: "easy" | "medium" | "hard"): string {
-  if (level === "easy") return "Scout (Easy)";
-  if (level === "medium") return "Strategist (Medium)";
-  return "Grandmaster (Hard)";
+const AI_LOBBY_LABEL: Record<AiLevel, string> = {
+  novice: "Scout (Novice)",
+  casual: "Learner (Casual)",
+  skilled: "Strategist (Skilled)",
+  expert: "Adept (Expert)",
+  master: "Grandmaster (Master)"
+};
+
+function aiDisplayName(level: AiLevel): string {
+  return AI_LOBBY_LABEL[level];
 }
 
 function requireSocketAuth(token: string) {
@@ -234,7 +250,7 @@ io.on("connection", (socket) => {
         hostId: string;
         token: string;
         seat: number;
-        config: { mode: "open" | "ai"; aiLevel?: "easy" | "medium" | "hard" };
+        config: { mode: "open" | "ai"; aiLevel?: string };
       },
       cb: (payload: unknown) => void
     ) => {
@@ -249,7 +265,7 @@ io.on("connection", (socket) => {
       if (config.mode === "open") {
         if (existing?.isAi) room.seats = room.seats.filter((s) => s.seat !== seat);
       } else if (!existing) {
-        const level = config.aiLevel ?? "medium";
+        const level = normalizeAiLevel(config.aiLevel);
         room.seats.push({
           seat,
           id: `ai_${seat}`,
@@ -258,7 +274,7 @@ io.on("connection", (socket) => {
           aiLevel: level
         });
       } else if (existing.isAi) {
-        existing.aiLevel = config.aiLevel ?? "medium";
+        existing.aiLevel = normalizeAiLevel(config.aiLevel);
         existing.name = aiDisplayName(existing.aiLevel);
       } else {
         return cb({ ok: false, error: "Seat occupied by human" });
@@ -280,7 +296,13 @@ io.on("connection", (socket) => {
       if (room.seats.length < 2 || room.seats.length > 4) return cb({ ok: false, error: "Requires 2-4 players" });
       const players: PlayerInfo[] = room.seats
         .sort((a, b) => a.seat - b.seat)
-        .map((s) => ({ seat: s.seat, id: s.id, name: s.name, isAi: s.isAi, aiLevel: s.aiLevel }));
+        .map((s) => ({
+          seat: s.seat,
+          id: s.id,
+          name: s.name,
+          isAi: s.isAi,
+          aiLevel: s.isAi && s.aiLevel != null ? normalizeAiLevel(s.aiLevel) : undefined
+        }));
       room.matchStartedAt = new Date().toISOString();
       room.match = createMatch(code, players);
       autoRunAi(room);

@@ -1,4 +1,4 @@
-import { createDoubleDeckWithJokers, shuffle } from "./cards.js";
+import { createDoubleDeckWithJokers, pickUniformElement, shuffle } from "./cards.js";
 import { canAddToMeld, canReplaceWildInMeld, findLaydownForObjective, legalDiscardCandidates, validateMeld } from "./rules.js";
 import { breakTieByLatestHands, scoreHand } from "./scoring.js";
 import { Card, HandState, MatchState, Meld, Objective, PlayerInfo } from "./types.js";
@@ -51,7 +51,7 @@ function createHand(players: PlayerInfo[], objective: Objective): HandState {
     playerMelds,
     hands,
     laidDown,
-    activeSeat: players[0].seat,
+    activeSeat: pickUniformElement(players.map((p) => p.seat)),
     turnPhase: "draw_choice",
     winnerSeat: null,
     lastForcedDrawEvent: null

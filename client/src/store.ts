@@ -1,4 +1,4 @@
-import { findLaydownForObjective, GameAction, MatchState } from "@push-rummy/shared";
+import { findLaydownForObjective, GameAction, MatchState, type AiLevel } from "@push-rummy/shared";
 import { io, Socket } from "socket.io-client";
 import { create } from "zustand";
 
@@ -10,7 +10,7 @@ type PublicRoom = {
     id: string;
     name: string;
     isAi: boolean;
-    aiLevel?: "easy" | "medium" | "hard";
+    aiLevel?: AiLevel;
   }>;
   status: "lobby" | "in_hand" | "between_hands" | "finished";
   match: MatchState | null;
@@ -60,7 +60,7 @@ type State = {
   createRoom: () => void;
   joinRoom: (code: string) => void;
   leaveRoom: () => void;
-  setAiSeat: (seat: number, level: "easy" | "medium" | "hard" | "open") => void;
+  setAiSeat: (seat: number, level: AiLevel | "open") => void;
   startGame: () => void;
   continueHand: () => void;
   sendAction: (action: GameAction) => void;

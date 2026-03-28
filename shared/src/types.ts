@@ -55,12 +55,15 @@ export type HandState = {
   lastForcedDrawEvent: { seat: number; count: number; nonce: number } | null;
 };
 
+/** AI strength tier; legacy wire values easy/medium/hard are normalized server-side. */
+export type AiLevel = "novice" | "casual" | "skilled" | "expert" | "master";
+
 export type PlayerInfo = {
   seat: number;
   id: string;
   name: string;
   isAi: boolean;
-  aiLevel?: "easy" | "medium" | "hard";
+  aiLevel?: AiLevel;
 };
 
 export type MatchState = {

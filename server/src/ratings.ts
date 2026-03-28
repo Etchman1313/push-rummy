@@ -1,14 +1,8 @@
-import { MatchState, PlayerInfo } from "@push-rummy/shared";
+import { aiOpponentAnchor, MatchState, PlayerInfo, tierPresence } from "@push-rummy/shared";
 import { db } from "./db.js";
 
 const K_FACTOR = Number(process.env.RATING_K_FACTOR ?? 32);
 const AI_WEIGHT = Number(process.env.RATING_AI_WEIGHT ?? 0.5);
-
-const AI_ANCHOR: Record<string, number> = {
-  easy: 1100,
-  medium: 1400,
-  hard: 1700
-};
 
 type RatedPlayer = {
   userId: string;
@@ -51,6 +45,7 @@ function getRatings(userId: string) {
 function updateRecordCounters(p: RatedPlayer, won: boolean): void {
   const deltaWin = won ? 1 : 0;
   const deltaLoss = won ? 0 : 1;
+  const tp = tierPresence(p.aiLevels);
   db.prepare(
     `UPDATE player_records SET
       wins = wins + ?, losses = losses + ?, total_games = total_games + 1, total_points = total_points + ?,
@@ -72,18 +67,18 @@ function updateRecordCounters(p: RatedPlayer, won: boolean): void {
     p.isHvH ? 0 : deltaLoss,
     p.isHvH ? 0 : 1,
     p.isHvH ? 0 : p.score,
-    p.aiLevels.includes("easy") ? deltaWin : 0,
-    p.aiLevels.includes("easy") ? deltaLoss : 0,
-    p.aiLevels.includes("easy") ? 1 : 0,
-    p.aiLevels.includes("easy") ? p.score : 0,
-    p.aiLevels.includes("medium") ? deltaWin : 0,
-    p.aiLevels.includes("medium") ? deltaLoss : 0,
-    p.aiLevels.includes("medium") ? 1 : 0,
-    p.aiLevels.includes("medium") ? p.score : 0,
-    p.aiLevels.includes("hard") ? deltaWin : 0,
-    p.aiLevels.includes("hard") ? deltaLoss : 0,
-    p.aiLevels.includes("hard") ? 1 : 0,
-    p.aiLevels.includes("hard") ? p.score : 0,
+      tp.easy ? deltaWin : 0,
+      tp.easy ? deltaLoss : 0,
+      tp.easy ? 1 : 0,
+      tp.easy ? p.score : 0,
+      tp.medium ? deltaWin : 0,
+      tp.medium ? deltaLoss : 0,
+      tp.medium ? 1 : 0,
+      tp.medium ? p.score : 0,
+      tp.hard ? deltaWin : 0,
+      tp.hard ? deltaLoss : 0,
+      tp.hard ? 1 : 0,
+      tp.hard ? p.score : 0,
     p.userId
   );
 }
@@ -138,7 +133,7 @@ export function finalizeCompletedMatch(matchId: string, startedAt: string, match
       const opponents = participants.filter((p) => p.player.seat !== hp.player.seat);
       const oppGlobalAvg =
         opponents.reduce((sum, o) => {
-          if (o.player.isAi) return sum + AI_ANCHOR[o.player.aiLevel ?? "medium"];
+          if (o.player.isAi) return sum + aiOpponentAnchor(o.player.aiLevel);
           return sum + getRatings(o.player.id).global_rating;
         }, 0) / opponents.length;
 
@@ -160,9 +155,10 @@ export function finalizeCompletedMatch(matchId: string, startedAt: string, match
       let hard = own.hvai_hard;
       if (!isHvH && aiLevels.length > 0) {
         const per = Math.round(segmentDelta / aiLevels.length);
-        if (aiLevels.includes("easy")) easy += per;
-        if (aiLevels.includes("medium")) medium += per;
-        if (aiLevels.includes("hard")) hard += per;
+        const tp = tierPresence(aiLevels);
+        if (tp.easy) easy += per;
+        if (tp.medium) medium += per;
+        if (tp.hard) hard += per;
       }
 
       db.prepare(

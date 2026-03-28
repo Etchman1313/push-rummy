@@ -38,9 +38,9 @@ function LeaderboardPanel({ variant = "full" }: { variant?: "full" | "embedded" 
           <option value="all">All modes</option>
           <option value="hvh">Human vs Human</option>
           <option value="hvai">Human vs AI</option>
-          <option value="easy">vs AI Easy</option>
-          <option value="medium">vs AI Medium</option>
-          <option value="hard">vs AI Hard</option>
+          <option value="easy">vs AI easy tier (Novice, Casual)</option>
+          <option value="medium">vs AI medium tier (Skilled)</option>
+          <option value="hard">vs AI hard tier (Expert, Master)</option>
         </select>
         <select value={leaderboardSort} onChange={(e) => void setLeaderboardSort(e.target.value as never)} aria-label="Sort by">
           <option value="rating">Sort: Rating</option>
@@ -291,10 +291,24 @@ function Lobby() {
               )}
               {isHost && seat !== 0 && (!s || s.isAi) && (
                 <div className="aiButtons">
-                  <button onClick={() => setAiSeat(seat, "easy")}>Easy AI</button>
-                  <button onClick={() => setAiSeat(seat, "medium")}>Medium AI</button>
-                  <button onClick={() => setAiSeat(seat, "hard")}>Hard AI</button>
-                  <button onClick={() => setAiSeat(seat, "open")}>Open</button>
+                  <button type="button" onClick={() => setAiSeat(seat, "novice")}>
+                    Novice
+                  </button>
+                  <button type="button" onClick={() => setAiSeat(seat, "casual")}>
+                    Casual
+                  </button>
+                  <button type="button" onClick={() => setAiSeat(seat, "skilled")}>
+                    Skilled
+                  </button>
+                  <button type="button" onClick={() => setAiSeat(seat, "expert")}>
+                    Expert
+                  </button>
+                  <button type="button" onClick={() => setAiSeat(seat, "master")}>
+                    Master
+                  </button>
+                  <button type="button" onClick={() => setAiSeat(seat, "open")}>
+                    Open
+                  </button>
                 </div>
               )}
             </div>
@@ -756,7 +770,7 @@ export default function App() {
                   <div className="playGrid">
                     <button className="primary playTile" type="button" onClick={() => void createRoom()}>
                       <strong>New room</strong>
-                      <span>Host — you get seat 1</span>
+                      <span>Host — seat 1 · first to act is random each hand</span>
                     </button>
                     <div className="playJoin">
                       <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="ROOM CODE" />

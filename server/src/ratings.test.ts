@@ -53,7 +53,7 @@ describe("ratings finalizeCompletedMatch", () => {
       roomCode: "ROOM",
       players: [
         { seat: 0, id: human.id, name: "you", isAi: false },
-        { seat: 1, id: "ai_1", name: "Scout (Easy)", isAi: true, aiLevel: "easy" as const }
+        { seat: 1, id: "ai_1", name: "Scout (Novice)", isAi: true, aiLevel: "novice" }
       ],
       currentHandIndex: 0,
       handHistory: [],
