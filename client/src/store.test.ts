@@ -45,6 +45,22 @@ describe("useGameStore", () => {
     expect(useGameStore.getState().toasts.length).toBe(0);
   });
 
+  it("loadProfile sets developerHomeAccess from server flag", async () => {
+    useGameStore.setState({
+      token: "tok",
+      user: { id: "u", username: "a" }
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({ ok: true, developerHome: true, ratings: {} })
+      }))
+    );
+    await useGameStore.getState().loadProfile();
+    expect(useGameStore.getState().developerHomeAccess).toBe(true);
+  });
+
   it("loadLeaderboard sets rows", async () => {
     vi.stubGlobal(
       "fetch",
@@ -81,6 +97,9 @@ describe("useGameStore", () => {
             ok: true,
             json: async () => ({ ok: true, user: { id: "u1", username: "alice" }, token: jwt })
           };
+        }
+        if (u.includes("/profile")) {
+          return { ok: true, json: async () => ({ ok: true, developerHome: false, ratings: {} }) };
         }
         if (u.includes("/leaderboard")) {
           return { ok: true, json: async () => ({ ok: true, rows: [] }) };
@@ -124,7 +143,7 @@ describe("useGameStore", () => {
           return { ok: true, json: async () => ({ ok: true, rows: [] }) };
         }
         if (u.includes("/profile")) {
-          return { ok: true, json: async () => ({ ok: true, ratings: {} }) };
+          return { ok: true, json: async () => ({ ok: true, developerHome: false, ratings: {} }) };
         }
         return { ok: true, json: async () => ({ ok: true }) };
       })

@@ -12,7 +12,6 @@ import {
 import type { CSSProperties } from "react";
 import { DragEvent, useEffect, useMemo, useRef, useState } from "react";
 import { DeveloperHome } from "./DeveloperHome";
-import { isDeveloperUser } from "./developer";
 import { useGameStore } from "./store";
 import { ToastStack } from "./ToastStack";
 import { cardArtUrl, cumulativePlaceBySeat, objectiveLabel, objectiveOrder, phaseLabel } from "./uiUtils";
@@ -634,6 +633,7 @@ export default function App() {
   const login = useGameStore((s) => s.login);
   const logout = useGameStore((s) => s.logout);
   const loadProfile = useGameStore((s) => s.loadProfile);
+  const developerHomeAccess = useGameStore((s) => s.developerHomeAccess);
   const createRoom = useGameStore((s) => s.createRoom);
   const joinRoom = useGameStore((s) => s.joinRoom);
   const error = useGameStore((s) => s.error);
@@ -659,15 +659,15 @@ export default function App() {
   }, [user, loadProfile]);
 
   const inMatch = Boolean(room?.match);
-  const showDeveloperNav = Boolean(user && isDeveloperUser(user.username));
+  const showDeveloperNav = Boolean(user && developerHomeAccess);
 
   useEffect(() => {
     if (inMatch) setDeveloperHomeOpen(false);
   }, [inMatch]);
 
   useEffect(() => {
-    if (!user || !isDeveloperUser(user.username)) setDeveloperHomeOpen(false);
-  }, [user]);
+    if (!user || !developerHomeAccess) setDeveloperHomeOpen(false);
+  }, [user, developerHomeAccess]);
 
   const developerView = showDeveloperNav && developerHomeOpen;
 

@@ -63,6 +63,20 @@ describe("HTTP API (integration)", () => {
     expect(res.body.ok).toBe(true);
     expect(res.body.user.username).toBe(user);
     expect(res.body.ratings).toBeTruthy();
+    expect(res.body.developerHome).toBe(false);
+  });
+
+  it("GET /profile sets developerHome true when DEVELOPER_USERNAME matches", async () => {
+    const prev = process.env.DEVELOPER_USERNAME;
+    process.env.DEVELOPER_USERNAME = "devgate_prof_user";
+    const { app } = await import("./index.js");
+    const reg = await request(app).post("/auth/register").send({ username: "devgate_prof_user", password: "secret1234" });
+    expect(reg.status).toBe(200);
+    const res = await request(app).get("/profile").set("Authorization", `Bearer ${reg.body.token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.developerHome).toBe(true);
+    if (prev === undefined) delete process.env.DEVELOPER_USERNAME;
+    else process.env.DEVELOPER_USERNAME = prev;
   });
 
   it("POST /auth/register returns 400 for short username", async () => {

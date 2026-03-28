@@ -41,6 +41,12 @@ This document describes how the server handles auth, exposure, and operational c
 
 - All database access uses **better-sqlite3** with **bound parameters** (`?` placeholders). Dynamic query text is not built from user input for SQL.
 
+## Developer Home (UI)
+
+- The client **does not** embed an allowlisted username. After login, **`GET /profile`** includes **`developerHome: boolean`**, computed server-side from **`DEVELOPER_USERNAME`** (case-insensitive match to the authenticated user’s username).
+- Set **`DEVELOPER_USERNAME`** in the server environment (e.g. `.env` or Docker Compose). Omit it to disable Developer Home for everyone.
+- This is a **convenience gate**, not a security boundary for sensitive operations; do not rely on it alone for privileged API access.
+
 ## Room privacy
 
 - **`room:get`** over the socket does not require a token. Anyone who knows or guesses a room code can read lobby snapshots. Room codes are short; treat this as **invite-link security**, not confidential matchmaking.

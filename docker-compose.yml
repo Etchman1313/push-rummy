@@ -17,6 +17,8 @@ services:
       BIND_ADDRESS: "0.0.0.0"
       # Required: unique secret, min 32 chars (see docs/SECURITY.md)
       JWT_SECRET: ${JWT_SECRET}
+      # Optional: login username (case-insensitive) for Developer Home (see docs/SECURITY.md)
+      DEVELOPER_USERNAME: ${DEVELOPER_USERNAME:-}
       # Optional: comma-separated browser origins, e.g. https://game.example.com
       # CORS_ORIGIN: ${CORS_ORIGIN:-}
       # Optional: only if you need POST /admin/reset-db (set a strong random value)

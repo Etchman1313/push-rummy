@@ -1,4 +1,3 @@
-import { isDeveloperUser } from "./developer";
 import { useGameStore } from "./store";
 
 type Props = {
@@ -7,7 +6,8 @@ type Props = {
 
 export function DeveloperHome({ onBack }: Props) {
   const user = useGameStore((s) => s.user);
-  if (!isDeveloperUser(user?.username)) {
+  const developerHomeAccess = useGameStore((s) => s.developerHomeAccess);
+  if (!developerHomeAccess) {
     return (
       <div className="panel devHome">
         <p className="error">You do not have access to Developer Home.</p>

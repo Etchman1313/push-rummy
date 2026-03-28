@@ -43,6 +43,8 @@ type State = {
   leaderboardMode: LeaderboardMode;
   leaderboardSort: LeaderboardSort;
   profile: Record<string, unknown> | null;
+  /** From GET /profile; server decides via DEVELOPER_USERNAME (never embedded in client bundle). */
+  developerHomeAccess: boolean;
   toasts: ToastItem[];
   error: string | null;
   pushToast: (message: string, variant?: ToastVariant) => void;
@@ -106,6 +108,7 @@ export const useGameStore = create<State>((set, get) => ({
   leaderboardMode: "all",
   leaderboardSort: "rating",
   profile: null,
+  developerHomeAccess: false,
   toasts: [],
   error: null,
   pushToast: (message, variant = "info") => {
@@ -126,6 +129,7 @@ export const useGameStore = create<State>((set, get) => ({
       set({ user: body.user, token: body.token, error: null });
       get().pushToast("Account ready. Welcome to the table.", "success");
       await get().loadLeaderboard();
+      await get().loadProfile();
       get().connect();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Registration failed";
@@ -159,7 +163,16 @@ export const useGameStore = create<State>((set, get) => ({
       sock.removeAllListeners();
       sock.disconnect();
     }
-    set({ socket: null, user: null, token: null, room: null, profile: null, error: null, toasts: [] });
+    set({
+      socket: null,
+      user: null,
+      token: null,
+      room: null,
+      profile: null,
+      developerHomeAccess: false,
+      error: null,
+      toasts: []
+    });
   },
   loadLeaderboard: async () => {
     const { serverUrl, leaderboardMode, leaderboardSort } = get();
@@ -182,7 +195,11 @@ export const useGameStore = create<State>((set, get) => ({
       headers: { Authorization: `Bearer ${token}` }
     });
     const body = await res.json();
-    if (body.ok) set({ profile: body });
+    if (body.ok)
+      set({
+        profile: body,
+        developerHomeAccess: Boolean((body as { developerHome?: boolean }).developerHome)
+      });
   },
   connect: () => {
     const token = get().token;

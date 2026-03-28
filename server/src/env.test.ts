@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { assertProductionEnv, configuredCorsOrigins, isAdminResetConfigured } from "./env.js";
+import { assertProductionEnv, configuredCorsOrigins, developerHomeForUsername, isAdminResetConfigured } from "./env.js";
 
 describe("env helpers", () => {
   const orig = { ...process.env };
@@ -36,5 +36,16 @@ describe("env helpers", () => {
     expect(isAdminResetConfigured()).toBe(false);
     process.env.ADMIN_RESET_KEY = "x";
     expect(isAdminResetConfigured()).toBe(true);
+  });
+
+  it("developerHomeForUsername is false when DEVELOPER_USERNAME unset", () => {
+    delete process.env.DEVELOPER_USERNAME;
+    expect(developerHomeForUsername("anyone")).toBe(false);
+  });
+
+  it("developerHomeForUsername matches case-insensitively when set", () => {
+    process.env.DEVELOPER_USERNAME = "Admin@Example.com";
+    expect(developerHomeForUsername("admin@example.com")).toBe(true);
+    expect(developerHomeForUsername("other")).toBe(false);
   });
 });

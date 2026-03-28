@@ -24,3 +24,13 @@ export function isAdminResetConfigured(): boolean {
   const k = process.env.ADMIN_RESET_KEY;
   return typeof k === "string" && k.length > 0;
 }
+
+/**
+ * When `DEVELOPER_USERNAME` is set, that login (case-insensitive) may use Developer Home in the client.
+ * The value is never sent to browsers except as a boolean on GET /profile.
+ */
+export function developerHomeForUsername(username: string): boolean {
+  const raw = process.env.DEVELOPER_USERNAME;
+  if (!raw?.trim()) return false;
+  return username.trim().toLowerCase() === raw.trim().toLowerCase();
+}

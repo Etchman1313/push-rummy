@@ -21,7 +21,7 @@ import {
 } from "./db.js";
 import { loginUser, registerUser, signAuthToken, verifyAuthToken } from "./auth.js";
 import { finalizeCompletedMatch } from "./ratings.js";
-import { assertProductionEnv, configuredCorsOrigins, isAdminResetConfigured } from "./env.js";
+import { assertProductionEnv, configuredCorsOrigins, developerHomeForUsername, isAdminResetConfigured } from "./env.js";
 
 assertProductionEnv();
 
@@ -389,7 +389,14 @@ app.get("/profile", (req, res) => {
        LIMIT 20`
     )
     .all(user.id);
-  res.json({ ok: true, user, ratings, records, recent });
+  res.json({
+    ok: true,
+    user,
+    ratings,
+    records,
+    recent,
+    developerHome: developerHomeForUsername(user.username)
+  });
 });
 
 app.get("/leaderboard", (req, res) => {

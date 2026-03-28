@@ -73,6 +73,7 @@ Optional compose overrides (uncomment in `docker-compose.yml` or set in `.env`):
 | `ADMIN_RESET_KEY` | Optional | If unset, admin reset route is disabled (404) |
 | `TRUST_PROXY` | Optional | Set to `1` behind nginx/Traefik |
 | `RATING_K_FACTOR`, `RATING_AI_WEIGHT` | Optional | Tuning for Elo-style updates |
+| `DEVELOPER_USERNAME` | Optional | Server-only; that login sees Developer Home (`GET /profile` returns `developerHome`) |
 
 See [.env.example](.env.example) for a template.
 
