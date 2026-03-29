@@ -12,6 +12,7 @@ import {
 } from "@push-rummy/shared";
 import type { CSSProperties } from "react";
 import { DragEvent, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { AnalyticsPanel } from "./AnalyticsPanel";
 import { DeveloperHome } from "./DeveloperHome";
 import { useGameStore } from "./store";
 import { ToastStack } from "./ToastStack";
@@ -789,6 +790,7 @@ export default function App() {
             room?.match && <GameBoard match={room.match} />
           ) : (
             <>
+              {user && <AnalyticsPanel />}
               <LeaderboardPanel />
 
               {user && !room && (

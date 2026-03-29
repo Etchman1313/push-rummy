@@ -31,6 +31,7 @@ import {
 } from "./db.js";
 import { loginUser, registerUser, signAuthToken, verifyAuthToken } from "./auth.js";
 import { finalizeCompletedMatch } from "./ratings.js";
+import { getUserMatchHistoryBundle } from "./matchHistory.js";
 import { assertProductionEnv, configuredCorsOrigins, developerHomeForUsername, isAdminResetConfigured } from "./env.js";
 
 assertProductionEnv();
@@ -413,12 +414,15 @@ app.get("/profile", (req, res) => {
        LIMIT 20`
     )
     .all(user.id);
+  const { matchHistory, analytics } = getUserMatchHistoryBundle(user.id);
   res.json({
     ok: true,
     user,
     ratings,
     records,
     recent,
+    matchHistory,
+    analytics,
     developerHome: developerHomeForUsername(user.username)
   });
 });

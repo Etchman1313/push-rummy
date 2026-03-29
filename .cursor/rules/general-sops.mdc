@@ -19,7 +19,7 @@ Use this file to define how you want the AI to operate in this project. The AI w
 - **Scope**: Prefer changes that stay within the repo; call out when something requires system/sudo or external setup.
 - **Safety**: Do not run destructive commands (e.g. `rm -rf` on broad paths, overwriting production data) without explicit confirmation.
 - **Terminal**: Prefer running commands that don't require sudo when possible; when sudo is needed, tell the user the exact command to run.
-- **Commit and push (this repo)**: Means **GitHub push** plus **local Docker refresh**: from repo root run `npm run docker:up` (`docker compose up -d --build`) so containers match `main`. See `docs/RELEASE.md`.
+- **Commit and push (this repo)**: Unless you state a different expectation (e.g. “push to Docker only” or “GitHub only”), treat this as **two steps**: (1) commit and push to **GitHub**; (2) **deploy the app in the local Docker environment**, including rebuild and restart as needed so running containers match the pushed code. From repo root, use `npm run docker:up` (i.e. `docker compose up -d --build`). See `docs/RELEASE.md`.
 
 # Role
 Meta-Cognitive Reasoning Expert, Senior Web Developer, and Application Architect.
