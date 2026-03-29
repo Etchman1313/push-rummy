@@ -321,7 +321,8 @@ io.on("connection", (socket) => {
       const auth = requireSocketAuth(token);
       if (auth.id !== playerId) return cb({ ok: false, error: "Unauthorized identity" });
       const room = rooms.get(code);
-      if (!room?.match) return cb({ ok: false, error: "No active game" });
+      if (!room) return cb({ ok: false, error: "Room not found (server may have restarted)" });
+      if (!room.match) return cb({ ok: false, error: "No match in progress" });
       const player = room.match.players.find((p) => p.id === playerId);
       if (!player || player.isAi) return cb({ ok: false, error: "Invalid player" });
       try {
@@ -342,7 +343,8 @@ io.on("connection", (socket) => {
       const auth = requireSocketAuth(token);
       if (auth.id !== playerId) return cb({ ok: false, error: "Unauthorized identity" });
       const room = rooms.get(code);
-      if (!room?.match) return cb({ ok: false, error: "No active game" });
+      if (!room) return cb({ ok: false, error: "Room not found (server may have restarted)" });
+      if (!room.match) return cb({ ok: false, error: "No match in progress" });
       if (room.hostId !== playerId) return cb({ ok: false, error: "Only host can continue" });
       if (room.match.status !== "between_hands") return cb({ ok: false, error: "Not waiting between hands" });
       room.match = continueToNextHand(room.match);

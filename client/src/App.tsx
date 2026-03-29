@@ -7,10 +7,11 @@ import {
   legalDiscardCandidates,
   MatchState,
   representedRankForWildInMeld,
+  sortHandForObjective,
   sortMeldCardsForDisplay
 } from "@push-rummy/shared";
 import type { CSSProperties } from "react";
-import { DragEvent, useEffect, useMemo, useRef, useState } from "react";
+import { DragEvent, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { DeveloperHome } from "./DeveloperHome";
 import { useGameStore } from "./store";
 import { ToastStack } from "./ToastStack";
@@ -345,6 +346,10 @@ function GameBoard({ match }: { match: MatchState }) {
   const isHost = room?.hostId === playerId;
   const isMyTurn = match.hand.activeSeat === me.seat;
   const hand = match.hand.hands[me.seat];
+  const handSig = hand
+    .map((c) => `${c.id}:${c.rank}:${c.suit}`)
+    .sort()
+    .join("|");
   const handMap = useMemo(() => new Map(hand.map((c) => [c.id, c])), [hand]);
   const legalDiscards = useMemo(() => legalDiscardCandidates(hand, match.hand.tableMelds).map((c) => c.id), [hand, match.hand.tableMelds]);
   const canLayDown = !match.hand.laidDown[me.seat];
@@ -378,20 +383,36 @@ function GameBoard({ match }: { match: MatchState }) {
     return () => window.clearTimeout(t);
   }, [match.hand.tableMelds]);
 
-  useEffect(() => {
+  const lastHandIndexRef = useRef<number | null>(null);
+  useLayoutEffect(() => {
+    const idx = match.currentHandIndex;
+    if (lastHandIndexRef.current !== idx) {
+      lastHandIndexRef.current = idx;
+      setOrderedIds(sortHandForObjective(match.hand.objective, hand).map((c) => c.id));
+      return;
+    }
     setOrderedIds((prev) => {
-      const ids = hand.map((c) => c.id);
-      const carry = prev.filter((id) => ids.includes(id));
-      const added = ids.filter((id) => !carry.includes(id));
-      return [...carry, ...added];
+      const inHand = new Set(hand.map((c) => c.id));
+      const kept = prev.filter((id) => inHand.has(id));
+      const seen = new Set(kept);
+      const appended = hand.map((c) => c.id).filter((id) => !seen.has(id));
+      return [...kept, ...appended];
     });
+    /* hand + objective come from this render; deps are handSig + round so we skip work when only table/opponents change */
+  }, [match.currentHandIndex, handSig]);
+
+  const sortHandByObjective = useCallback(() => {
+    setOrderedIds(sortHandForObjective(match.hand.objective, hand).map((c) => c.id));
+  }, [match.hand.objective, hand]);
+
+  useEffect(() => {
     setSelectedIds((prev) => prev.filter((id) => hand.some((c) => c.id === id)));
     setDraftMelds((prev) =>
       prev
         .map((m) => ({ ...m, cardIds: m.cardIds.filter((id) => hand.some((c) => c.id === id)) }))
         .filter((m) => m.cardIds.length > 0)
     );
-  }, [hand]);
+  }, [handSig, hand]);
 
   useEffect(() => {
     const event = match.hand.lastForcedDrawEvent;
@@ -551,9 +572,16 @@ function GameBoard({ match }: { match: MatchState }) {
         <div className="panel handPanel">
           <div className="handPanel__head">
             <h3>Your hand</h3>
-            <span className="handCount">{hand.length} cards</span>
+            <div className="handPanel__headRight">
+              <span className="handCount">{hand.length} cards</span>
+              <button type="button" className="handSortBtn" onClick={sortHandByObjective} title="Reorder cards for the current objective">
+                Sort by objective
+              </button>
+            </div>
           </div>
-          <p className="panelHint handHint">Drag to reorder · Click to multi-select · Highlighted = legal discard</p>
+          <p className="panelHint handHint">
+            Sorted once per deal; new draws append at the end. Drag to reorder · Click to multi-select · Highlighted = legal discard
+          </p>
           <div className={`cards handRail ${handDealSweep ? "handRail--dealSweep" : ""}`}>
             {orderedHand.map((c, i) => (
               <button

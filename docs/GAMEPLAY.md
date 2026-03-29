@@ -27,6 +27,10 @@ This document describes the **player experience** and how it maps to the running
 - The shared engine **shuffles** the stock with a **cryptographic RNG** when available (`crypto.getRandomValues`), with a safe fallback where not. Each new hand picks a **random starting seat** for the draw phase.
 - The shared engine deals the first hand and sets the first **hand objective** (hand 1 of 6). See **RULES.md** for the objective list.
 
+## Hand display
+
+- Your hand is **sorted automatically** for the current round **objective**: when you can complete the objective, order follows valid meld groups; otherwise sets cluster by rank (set hands) or by suit then rank (run hands), with a run-then-set heuristic for mixed objectives (e.g. run + set). You can still **drag** cards to reorder until the next time your hand updates from the server.
+
 ## Turn flow (what the player sees)
 
 1. **Draw choice** (`draw_choice`): the active player must **pick up** the visible discard or **push** (per rules: deck + discard bundle to the left neighbor, then draw). The UI sends `choose_pickup` or `choose_push`.
